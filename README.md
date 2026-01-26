@@ -73,7 +73,6 @@ Header: x-api-key: <your_api_key>
 
 
 ### Request Body
-```json
 {
   "sessionId": "string",
   "message": {
@@ -177,7 +176,7 @@ Pattern Extraction: Regex-based NLP
 
 Authentication: API key
 
-##✅ Compliance Checklist
+## Compliance Checklist
 Requirements
 Public REST API	✅
 API Key Security	✅
@@ -189,6 +188,6 @@ Mandatory Final Callback	✅
 No Hardcoding	✅
 
 
-#🏁 Conclusion
+# Conclusion
 
 This project delivers a fully compliant, production-grade Agentic Honey-Pot system aligned exactly with the GUVI India AI Impact Buildathon problem statement and evaluation criteria.
