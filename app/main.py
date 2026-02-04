@@ -15,6 +15,8 @@ import time
 from fastapi import FastAPI, Depends
 import time
 
+from typing import Optional
+
 app = FastAPI(title="Agentic Honey-Pot API")
 
 SESSION_TTL = 300  # 5 minutes
@@ -22,10 +24,30 @@ SESSION_TTL = 300  # 5 minutes
 
 @app.post("/api/honeypot", response_model=ScamResponse)
 def honeypot_endpoint(
-    data: ScamRequest,
+    data: Optional[ScamRequest] = None,
     api_key: str = Depends(verify_api_key)
 ):
     session = sessions[data.sessionId]
+
+        # --------------------------------------------------
+    # GUVI Endpoint Tester compatibility (NO BODY)
+    # --------------------------------------------------
+    if data is None:
+        return ScamResponse(
+            status="success",
+            scamDetected=False,
+            engagementMetrics=EngagementMetrics(
+                engagementDurationSeconds=0,
+                totalMessagesExchanged=0
+            ),
+            extractedIntelligence=ExtractedIntelligence(
+                bankAccounts=[],
+                upiIds=[],
+                phishingLinks=[],
+                phoneNumbers=[]
+            ),
+            agentNotes="Honeypot endpoint reachable and authenticated"
+        )
 
     # --------------------------------------------------
     # 0. Session TTL expiry
