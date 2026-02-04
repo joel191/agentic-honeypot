@@ -202,6 +202,13 @@ def view_session(
     return sessions[sessionId]
 
 @app.get("/")
+def root():
+    return {
+        "message": "Agentic Honey-Pot API is running",
+        "health": "/health",
+        "endpoint": "/api/honeypot"
+    }
+
 @app.get("/health")
 def health_check():
     return {
@@ -209,3 +216,4 @@ def health_check():
         "service": "agentic-honeypot",
         "timestamp": int(time.time())
     }
+
