@@ -15,6 +15,7 @@ import time
 from fastapi import FastAPI, Depends
 import time
 
+from fastapi import Body
 from typing import Optional
 
 app = FastAPI(title="Agentic Honey-Pot API")
@@ -24,7 +25,7 @@ SESSION_TTL = 300  # 5 minutes
 
 @app.post("/api/honeypot", response_model=ScamResponse)
 def honeypot_endpoint(
-    data: Optional[ScamRequest] = None,
+    data: Optional[ScamRequest] = Body(default=None),
     api_key: str = Depends(verify_api_key)
 ):
     session = sessions[data.sessionId]
