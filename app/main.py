@@ -22,6 +22,16 @@ app = FastAPI(title="Agentic Honey-Pot API")
 
 SESSION_TTL = 300  # 5 minutes
 
+@app.get("/api/honeypot")
+def honeypot_get(
+    api_key: str = Depends(verify_api_key)
+):
+    return {
+        "status": "success",
+        "message": "Honeypot endpoint reachable",
+        "note": "GET request accepted for endpoint validation"
+    }
+
 
 @app.post("/api/honeypot", response_model=ScamResponse)
 def honeypot_endpoint(
