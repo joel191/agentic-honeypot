@@ -12,6 +12,8 @@ from app.agent import generate_agent_reply
 from app.extractor import extract_intelligence
 from app.callback import send_final_callback
 import time
+from fastapi import FastAPI, Depends
+import time
 
 app = FastAPI(title="Agentic Honey-Pot API")
 
@@ -198,3 +200,12 @@ def view_session(
         raise HTTPException(status_code=404, detail="Session not found")
 
     return sessions[sessionId]
+
+@app.get("/")
+@app.get("/health")
+def health_check():
+    return {
+        "status": "ok",
+        "service": "agentic-honeypot",
+        "timestamp": int(time.time())
+    }
