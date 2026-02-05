@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from typing import Union
 
 class Message(BaseModel):
     sender: str
     text: str
-    timestamp: str
+    timestamp: Union[int, str]
 
 class Metadata(BaseModel):
     channel: Optional[str]

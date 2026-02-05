@@ -167,21 +167,17 @@ def honeypot_endpoint(
     # --------------------------------------------------
     # 7. Final response
     # --------------------------------------------------
-    return ScamResponse(
-        status="success",
-        scamDetected=scam_detected,
-        engagementMetrics=EngagementMetrics(
-            engagementDurationSeconds=duration,
-            totalMessagesExchanged=total_messages
-        ),
-        extractedIntelligence=ExtractedIntelligence(
-            bankAccounts=session["intelligence"]["bankAccounts"],
-            upiIds=session["intelligence"]["upiIds"],
-            phishingLinks=session["intelligence"]["phishingLinks"],
-            phoneNumbers=session["intelligence"]["phoneNumbers"]
-        ),
-        agentNotes=agent_notes
-    )
+    reply_text = (
+        generate_agent_reply(total_messages)
+        if scam_detected
+        else "Hello, how can I help you?"
+)
+
+    return {
+        "status": "success",
+        "reply": reply_text
+}
+
 
 
 # ==================================================
