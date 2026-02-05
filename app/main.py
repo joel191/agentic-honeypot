@@ -33,93 +33,60 @@ def honeypot_get(
     }
 
 
-@app.post("/api/honeypot", response_model=ScamResponse)
+from typing import Optional
+from fastapi import Body
+
+@app.post("/api/honeypot")
 def honeypot_endpoint(
     data: Optional[ScamRequest] = Body(default=None),
     api_key: str = Depends(verify_api_key)
 ):
-    session = sessions[data.sessionId]
-
-        # --------------------------------------------------
-    # GUVI Endpoint Tester compatibility (NO BODY)
+    # --------------------------------------------------
+    # ✅ GUVI Endpoint Tester (NO BODY)
     # --------------------------------------------------
     if data is None:
-        return ScamResponse(
-            status="success",
-            scamDetected=False,
-            engagementMetrics=EngagementMetrics(
-                engagementDurationSeconds=0,
-                totalMessagesExchanged=0
-            ),
-            extractedIntelligence=ExtractedIntelligence(
-                bankAccounts=[],
-                upiIds=[],
-                phishingLinks=[],
-                phoneNumbers=[]
-            ),
-            agentNotes="Honeypot endpoint reachable and authenticated"
-        )
+        return {
+            "status": "success",
+            "message": "Honeypot endpoint reachable and authenticated"
+        }
 
     # --------------------------------------------------
-    # 0. Session TTL expiry
+    # Session handling (SAFE)
     # --------------------------------------------------
+    session = sessions[data.sessionId]
+
+    # TTL expiry
     if time.time() - session["start_time"] > SESSION_TTL:
         del sessions[data.sessionId]
         session = sessions[data.sessionId]
 
-    # --------------------------------------------------
-    # 0.1 Block closed sessions
-    # --------------------------------------------------
+    # Block closed sessions
     if session.get("closed"):
-        return ScamResponse(
-            status="session_closed",
-            scamDetected=True,
-            engagementMetrics=EngagementMetrics(
-                engagementDurationSeconds=0,
-                totalMessagesExchanged=len(session["messages"])
-            ),
-            extractedIntelligence=ExtractedIntelligence(
-                bankAccounts=session["intelligence"]["bankAccounts"],
-                upiIds=session["intelligence"]["upiIds"],
-                phishingLinks=session["intelligence"]["phishingLinks"],
-                phoneNumbers=session["intelligence"]["phoneNumbers"]
-            ),
-            agentNotes="Session already finalized"
-        )
+        return {
+            "status": "session_closed",
+            "scamDetected": True,
+            "note": "Session already finalized"
+        }
 
-    # --------------------------------------------------
-    # Store incoming message
-    # --------------------------------------------------
+    # Store message
     session["messages"].append(data.message)
-
-    duration = int(time.time() - session["start_time"])
     total_messages = len(session["messages"])
+    duration = int(time.time() - session["start_time"])
 
-    # --------------------------------------------------
-    # 1. Scam detection (message-level)
-    # --------------------------------------------------
+    # Scam detection
     result = detect_scam_intent(data.message.text)
-
     if result["is_scam"]:
         session["scamDetected"] = True
 
-    # --------------------------------------------------
-    # 2. Intelligence extraction (ONLY scammer messages)
-    # --------------------------------------------------
+    # Intelligence extraction
     if data.message.sender == "scammer":
         extracted = extract_intelligence(data.message.text)
-
         for key, values in extracted.items():
-            if key not in session["intelligence"]:
-                session["intelligence"][key] = []
-
             for value in values:
                 if value not in session["intelligence"][key]:
                     session["intelligence"][key].append(value)
 
-    # --------------------------------------------------
-    # 3. Force scam if financial entities exist
-    # --------------------------------------------------
+    # Force scam if financial entities exist
     if (
         session["intelligence"]["bankAccounts"]
         or session["intelligence"]["upiIds"]
@@ -129,54 +96,32 @@ def honeypot_endpoint(
 
     scam_detected = session["scamDetected"]
 
-    # --------------------------------------------------
-    # 4. Agent notes (explainable & clean)
-    # --------------------------------------------------
-    if scam_detected:
-        if result["matched_keywords"]:
-            agent_notes = (
-                "Detected scam indicators: "
-                + ", ".join(result["matched_keywords"])
-            )
-        else:
-            agent_notes = (
-                "Scam confirmed based on financial redirection patterns"
-            )
-    else:
-        agent_notes = "No scam indicators detected"
+    # Agent notes
+    agent_notes = (
+        "Detected scam indicators: " + ", ".join(result["matched_keywords"])
+        if scam_detected and result["matched_keywords"]
+        else "Scam confirmed based on financial redirection patterns"
+        if scam_detected
+        else "No scam indicators detected"
+    )
 
-    # --------------------------------------------------
-    # 5. Autonomous agent reply
-    # --------------------------------------------------
-    if scam_detected:
-        agent_reply = generate_agent_reply(total_messages)
-        session["messages"].append({
-            "sender": "user",
-            "text": agent_reply,
-            "timestamp": str(time.time())
-        })
-
-    # --------------------------------------------------
-    # 6. GUVI callback (ONLY ONCE)
-    # --------------------------------------------------
+    # Callback (once)
     if scam_detected and total_messages >= 3 and not session.get("callbackSent"):
         send_final_callback(data.sessionId, session)
         session["callbackSent"] = True
-        session["closed"] = True  # auto-close after callback
+        session["closed"] = True
 
-    # --------------------------------------------------
-    # 7. Final response
-    # --------------------------------------------------
-    reply_text = (
-        generate_agent_reply(total_messages)
-        if scam_detected
-        else "Hello, how can I help you?"
-)
-
+    # Final response (NO response_model)
     return {
         "status": "success",
-        "reply": reply_text
-}
+        "scamDetected": scam_detected,
+        "engagementMetrics": {
+            "engagementDurationSeconds": duration,
+            "totalMessagesExchanged": total_messages
+        },
+        "extractedIntelligence": session["intelligence"],
+        "agentNotes": agent_notes
+    }
 
 
 
